@@ -140,3 +140,4 @@ duk_ret_t dukopen_uv(duk_context *ctx) {
   duk_put_function_list(ctx, -1, duv_funcs);
   return 1;
 }
+

@@ -12,6 +12,8 @@ static duk_ret_t duv_loadfile(duk_context *ctx) {
   char* chunk;
   uv_buf_t buf;
 
+  printf("duv_loadfile path: %s\n", path);
+
   if (uv_fs_open(&loop, &req, path, O_RDONLY, 0644, NULL) < 0) goto fail;
   uv_fs_req_cleanup(&req);
   fd = req.result;
@@ -37,6 +39,16 @@ static duk_ret_t duv_loadfile(duk_context *ctx) {
   if (fd) uv_fs_close(&loop, &req, fd, NULL);
   uv_fs_req_cleanup(&req);
   duk_error(ctx, DUK_ERR_ERROR, "%s: %s: %s", uv_err_name(req.result), uv_strerror(req.result), path);
+}
+
+static duk_ret_t duv_eval(duk_context *ctx) {
+  const char* filename = duk_require_string(ctx, 0);
+  const char* source = duk_require_string(ctx, 1);
+  if (duk_peval_string(ctx, source) !=0) {
+    printf("eval failed: %s\n", duk_safe_to_string(ctx, -1));
+  }
+  duk_pop(ctx);
+  return 0;
 }
 
 struct duv_list {
@@ -401,6 +413,10 @@ static duk_ret_t duv_main(duk_context *ctx) {
   duk_dup(ctx, -1);
   duk_put_prop_string(ctx, -2, "global");
 
+  // globalThis
+  duk_dup(ctx, -1);
+  duk_put_prop_string(ctx, -2, "globalThis");
+
   duk_push_boolean(ctx, 1);
   duk_put_prop_string(ctx, -2, "dukluv");
 
@@ -428,6 +444,9 @@ static duk_ret_t duv_main(duk_context *ctx) {
 
   duk_push_c_function(ctx, duv_loadfile, 1);
   duk_put_prop_string(ctx, -2, "loadFile");
+
+  duk_push_c_function(ctx, duv_eval, 2);
+  duk_put_prop_string(ctx, -2, "eval");
 
   // require.call({id:uv.cwd()+"/main.c"}, path);
   duk_push_c_function(ctx, duv_require, 1);
